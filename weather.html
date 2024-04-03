@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Weather Dashboard</title>
+    <!-- Bootstrap for responsive styling -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <style>
+        body {
+            padding: 20px;
+            background-color: #f8f9fa;
+        }
+        .container {
+            max-width: 100%; /* Allow container to be full width */
+            margin: 0 auto;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center; /* Center cards if they don't fill the entire row */
+        }
+        .weather-card {
+            margin-bottom: 20px;
+            padding: 15px;
+            border-radius: 8px;
+            background: #ffffff;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        .today-weather {
+            background: linear-gradient(135deg, #6fd0c8, #91eaf5);
+            color: #ffffff;
+        }
+        .forecast-weather {
+            background: linear-gradient(135deg, #e4e4e4, #f9f9f9);
+            color: #333333;
+        }
+        .weather-icon {
+            width: 80px;
+            height: 80px;
+            margin: 10px auto;
+            display: block;
+        }
+        .temperature, .weather-details {
+            font-size: 16px;
+            margin-top: 15px;
+            color: inherit;
+        }
+        /* Flex container for weather cards */
+    #supportedWeatherCardsContainer, #searchedWeatherCardsContainer {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-around; /* Adjust spacing between cards */
+    }
+
+    /* Weather card styles */
+    .weather-card {
+        flex: 1 1 300px; /* Adjust basis to 300px and allow them to grow and shrink */
+        margin: 10px; /* Keep a margin */
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        max-width: calc(33.333% - 20px); /* Aim for three cards in a row, adjust as necessary */
+    }
+
+    /* Detail line for time, icon, and temperature */
+    .weather-detail {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        width: 100%;
+    }
+
+    .weather-icon, .temperature, .weather-details, .time-label {
+        flex: 1; /* Equal width and space distribution */
+        text-align: center;
+    }
+
+    @media (max-width: 768px) {
+        .weather-card {
+            max-width: calc(33% - 20px); /* Two cards in a row on medium screens */
+        }
+    }
+    
+    @media (max-width: 480px) {
+        .weather-card {
+            max-width: 100%; /* Full width on small screens */
+        }
+    }
+    
+    .weather-icon, .temperature, .weather-details, .time-label {
+        flex: 1;
+        text-align: center;
+    }
+        /* Styling for the form to make it visually appealing and well-positioned */
+        .content {
+            width: 100%;
+            text-align: center;
+            margin-top: 20px;
+        }
+        #weatherForm {
+            display: inline-block;
+            margin-top: 20px;
+        }
+        #weatherForm input, #weatherForm button {
+            margin: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Supported Cities Weather</h1>
+        <div id="supportedWeatherCardsContainer"></div>
+        
+        <!-- Form to search and add new cities to the display -->
+        <h2>Search for City Weather</h2>
+        <div class="content">
+            <!-- Added form with better positioning for adding new cities -->
+            <form id="weatherForm">
+                <label for="city">Enter city name:</label>
+                <input type="text" id="cityInput" name="city" required>
+                <button type="submit">GET WEATHER</button>
+            </form>
+        </div>
+        <div id="searchedWeatherCardsContainer"></div>
+    </div>
+
+    <script>
+        // Load weather for predefined cities and attach event listeners on DOM load
+        document.addEventListener('DOMContentLoaded', function() {
+            const supportedCities = ['New York', 'Los Angeles', 'London', 'Tokyo'];
+            supportedCities.forEach(city => fetchWeather(city, 'supportedWeatherCardsContainer'));
+        });
+
+        // Handle form submission without reloading the page
+        document.getElementById('weatherForm').addEventListener('submit', function(event) {
+            event.preventDefault();
+            const city = document.getElementById('cityInput').value.trim();
+            fetchWeather(city, 'searchedWeatherCardsContainer');
+        });
+
+        // Fetch weather data from the server
+        function fetchWeather(city, containerId) {
+            fetch(`/weather?location=${city}`)
+            .then(response => response.json())
+            .then(data => {
+                console.log("Fetched weather data for city: ", city, data); // Logging fetched data
+                renderWeatherData(data, containerId);
+            })
+            .catch(error => console.error('Error fetching weather data:', error));
+        }
+
+        // Render weather data onto the page
+        function renderWeatherData(data, containerId) {
+            const weatherCardsContainer = document.getElementById(containerId);
+            const card = createWeatherCard(data);
+            weatherCardsContainer.appendChild(card);
+        }
+
+        // Create a card for each city's weather data
+        function createWeatherCard(data) {
+            const cardDiv = document.createElement('div');
+            cardDiv.className = 'weather-card today-weather';
+            const cityHeader = document.createElement('h3');
+            cityHeader.className = 'city-header';
+            cityHeader.textContent = data.city; // City name as the card header
+            cardDiv.appendChild(cityHeader);
+            // Process today's weather and forecasts
+            const todayData = data.today;
+            cardDiv.appendChild(createWeatherDetail(todayData, true));
+            data.forecast.forEach(forecast => {
+                cardDiv.appendChild(createWeatherDetail(forecast, false));
+            });
+            return cardDiv;
+        }
+
+        // Create weather details for today and forecast
+        function createWeatherDetail(weatherData, isToday) {
+            const detailDiv = document.createElement('div');
+            detailDiv.className = isToday ? 'weather-detail today-weather' : 'weather-detail forecast-weather';
+            // Only add time label for forecast
+            if (!isToday) {
+                const forecastTime = new Date(weatherData.date);
+                const timeLabel = document.createElement('div');
+                timeLabel.className = 'time-label';
+                timeLabel.textContent = forecastTime.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'});
+                detailDiv.appendChild(timeLabel);
+            }
+            const iconImg = document.createElement('img');
+            iconImg.src = weatherData.icon;
+            iconImg.className = 'weather-icon';
+            detailDiv.appendChild(iconImg);
+            const temperatureDiv = document.createElement('div');
+            temperatureDiv.className = 'temperature';
+            temperatureDiv.innerHTML = isToday ? `Temp: ${weatherData.temperature.toFixed(1)}°C` : `Max: ${weatherData.temp_max.toFixed(1)}°C, Min: ${weatherData.temp_min.toFixed(1)}°C`;
+            detailDiv.appendChild(temperatureDiv);
+            // Add humidity and wind details for today
+            if (isToday) {
+                const humidityDiv = document.createElement('div');
+                humidityDiv.className = 'weather-details';
+                humidityDiv.textContent = `Humidity: ${weatherData.humidity}%`;
+                detailDiv.appendChild(humidityDiv);
+                const windSpeedDiv = document.createElement('div');
+                windSpeedDiv.className = 'weather-details';
+                windSpeedDiv.textContent = `Wind: ${weatherData.wind_speed} m/s`;
+                detailDiv.appendChild(windSpeedDiv);
+            }
+            return detailDiv;
+        }
+    </script>
+</body>
+</html>
